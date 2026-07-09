@@ -1,0 +1,4 @@
+build/
+.cache/
+data/output/*
+!data/output/.gitkeep
