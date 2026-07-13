@@ -1,48 +1,60 @@
 #include <iostream>
+#include <iomanip>
 #include <Eigen/Dense>
 #include "rbd/RigidBody.hpp"
-#include "rbd/InertiaTensor.hpp"
 #include "rbd/World.hpp"
 
 int main() {
-    std::cout << "--- RBD Engine: Phase 2 (World Gravity & Projectile Motion) ---" << std::endl;
+    std::cout << "--- RBD Engine: Phase 3 (Tennis Racket Instability) ---" << std::endl;
 
-    // 1. Create the environment
+    // 1. Create a Zero-Gravity World
     rbd::World world;
+    world.gravity.setZero(); 
 
-    // 2. Create the body and set physical properties using the new primitives
-    rbd::RigidBody box;
-    box.setMass(2.0); // 2.0 kg
+    // 2. Initialize the Asymmetric Rigid Body
+    rbd::RigidBody body;
+    body.setMass(1.0); 
+
+    // 3. Define the Asymmetric Inertia Tensor (Three completely unique axes)
+    // I_xx = 0.1 (Smallest), I_yy = 0.4 (Intermediate), I_zz = 0.5 (Largest)
+    Eigen::Matrix3d asymmetric_inertia;
+    asymmetric_inertia << 0.1, 0.0, 0.0,
+                          0.0, 0.4, 0.0,
+                          0.0, 0.0, 0.5;
+    body.setInertiaTensor(asymmetric_inertia);
+
+    // 4. Spin concentrated on the Intermediate Axis (Y)
+    // A tiny perturbation (0.01) on X kicks off the physical instability
+    body.linear_velocity.setZero();
+    body.angular_velocity = Eigen::Vector3d(0.01, 5.0, 0.0);
     
-    // Create a 1m x 2m x 1m box
-    Eigen::Matrix3d box_inertia = rbd::InertiaTensor::createSolidBox(box.mass, 1.0, 2.0, 1.0);
-    box.setInertiaTensor(box_inertia);
+    world.addBody(&body);
 
-    // 3. Set Initial State (Projectile motion: 5 m/s forward on X)
-    box.linear_velocity = Eigen::Vector3d(5.0, 0.0, 0.0);
-    
-    // Add box to the world
-    world.addBody(&box);
-
-    std::cout << "\n[T = 0.0s] Initial State:" << std::endl;
-    std::cout << "Position: [" << box.position.transpose() << "]" << std::endl;
-    std::cout << "Lin Vel:  [" << box.linear_velocity.transpose() << "]" << std::endl;
-
-    // 4. Simulation Loop (1 second)
-    double dt = 0.01;
-    double end_time = 1.0;
+    // 5. Simulation Loop Parameters
+    double dt = 0.01;      // 10 millisecond steps
+    double end_time = 2.5; // 2.5 seconds gives enough time to watch the flip occur
     int steps = static_cast<int>(end_time / dt);
 
-    std::cout << "\nSimulating projectile motion in World with gravity..." << std::endl;
-    for (int i = 0; i < steps; ++i) {
-        world.step(dt); // Gravity and RK4 integration handled internally by World
-    }
+    std::cout << "\nSimulating free-body rotation on the Intermediate Axis..." << std::endl;
+    std::cout << std::fixed << std::setprecision(4);
+    std::cout << "\nTime(s)  |  AngVel_X  |  AngVel_Y  |  AngVel_Z" << std::endl;
+    std::cout << "-----------------------------------------------" << std::endl;
 
-    // 5. Print Output
-    std::cout << "\n[T = 1.0s] Final State:" << std::endl;
-    std::cout << "Position: [" << box.position.transpose() << "]  <-- Should be [5, -4.905, 0]" << std::endl;
-    std::cout << "Lin Vel:  [" << box.linear_velocity.transpose() << "]  <-- Should be [5, -9.81, 0]" << std::endl;
-    std::cout << "Ang Vel:  [" << box.angular_velocity.transpose() << "]  <-- Should be [0, 0, 0] (no rotation)" << std::endl;
+    // 6. Run the Simulation Loop
+    for (int i = 0; i <= steps; ++i) {
+        // Print telemetry every 20 steps to watch the trajectory trend
+        if (i % 20 == 0) {
+            std::cout << std::setw(6) << (i * dt) << "s | " 
+                      << std::setw(10) << body.angular_velocity.x() << " | "
+                      << std::setw(10) << body.angular_velocity.y() << " | "
+                      << std::setw(10) << body.angular_velocity.z() << std::endl;
+        }
+
+        // Integrate time step inside the world
+        if (i < steps) {
+            world.step(dt);
+        }
+    }
 
     return 0;
 }
