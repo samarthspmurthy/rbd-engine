@@ -1,60 +1,43 @@
 #include <iostream>
 #include <iomanip>
-#include <Eigen/Dense>
-#include "rbd/RigidBody.hpp"
-#include "rbd/World.hpp"
+#include "rbd/DoublePendulum.hpp"
+#include "rbd/Layer2Integrator.hpp" 
 
 int main() {
-    std::cout << "--- RBD Engine: Phase 3 (Tennis Racket Instability) ---" << std::endl;
+    std::cout << "--- RBD Engine: Phase 4 (Double Pendulum Energy Validation) ---" << std::endl;
 
-    // 1. Create a Zero-Gravity World
-    rbd::World world;
-    world.gravity.setZero(); 
+    rbd::DoublePendulum pendulum;
 
-    // 2. Initialize the Asymmetric Rigid Body
-    rbd::RigidBody body;
-    body.setMass(1.0); 
+    // Initial state: Drop from horizontal (theta1 = 0 rad, theta2 = 0 rad)
+    // Both angular velocities start at 0
+    pendulum.state << 0.0, 0.0, 0.0, 0.0;
 
-    // 3. Define the Asymmetric Inertia Tensor (Three completely unique axes)
-    // I_xx = 0.1 (Smallest), I_yy = 0.4 (Intermediate), I_zz = 0.5 (Largest)
-    Eigen::Matrix3d asymmetric_inertia;
-    asymmetric_inertia << 0.1, 0.0, 0.0,
-                          0.0, 0.4, 0.0,
-                          0.0, 0.0, 0.5;
-    body.setInertiaTensor(asymmetric_inertia);
-
-    // 4. Spin concentrated on the Intermediate Axis (Y)
-    // A tiny perturbation (0.01) on X kicks off the physical instability
-    body.linear_velocity.setZero();
-    body.angular_velocity = Eigen::Vector3d(0.01, 5.0, 0.0);
-    
-    world.addBody(&body);
-
-    // 5. Simulation Loop Parameters
-    double dt = 0.01;      // 10 millisecond steps
-    double end_time = 2.5; // 2.5 seconds gives enough time to watch the flip occur
+    double dt = 0.001; // 1 ms timestep for high-precision integration
+    double end_time = 5.0; // Simulate 5 seconds of chaotic swinging
     int steps = static_cast<int>(end_time / dt);
 
-    std::cout << "\nSimulating free-body rotation on the Intermediate Axis..." << std::endl;
-    std::cout << std::fixed << std::setprecision(4);
-    std::cout << "\nTime(s)  |  AngVel_X  |  AngVel_Y  |  AngVel_Z" << std::endl;
-    std::cout << "-----------------------------------------------" << std::endl;
+    std::cout << "\nSimulating conservative chaotic swing (zero torque, zero damping)..." << std::endl;
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "\nTime(s) |  Theta 1  |  Theta 2  |  Total Energy (J)" << std::endl;
+    std::cout << "-----------------------------------------------------" << std::endl;
 
-    // 6. Run the Simulation Loop
+    double initial_energy = pendulum.getTotalEnergy();
+
     for (int i = 0; i <= steps; ++i) {
-        // Print telemetry every 20 steps to watch the trajectory trend
-        if (i % 20 == 0) {
+        if (i % 500 == 0) { // Print every 0.5 seconds
             std::cout << std::setw(6) << (i * dt) << "s | " 
-                      << std::setw(10) << body.angular_velocity.x() << " | "
-                      << std::setw(10) << body.angular_velocity.y() << " | "
-                      << std::setw(10) << body.angular_velocity.z() << std::endl;
+                      << std::setw(9) << pendulum.state(0) << " | "
+                      << std::setw(9) << pendulum.state(1) << " | "
+                      << std::setw(14) << pendulum.getTotalEnergy() << std::endl;
         }
 
-        // Integrate time step inside the world
         if (i < steps) {
-            world.step(dt);
+            rbd::Layer2Integrator::step(pendulum, dt); 
         }
     }
+
+    std::cout << "\n[Validation] Initial Energy: " << initial_energy << " J" << std::endl;
+    std::cout << "[Validation] Final Energy:   " << pendulum.getTotalEnergy() << " J" << std::endl;
 
     return 0;
 }
