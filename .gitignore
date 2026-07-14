@@ -2,3 +2,6 @@ build/
 .cache/
 data/output/*
 !data/output/.gitkeep
+# Simulink cache and code generation artifacts
+*.slxc
+slprj/

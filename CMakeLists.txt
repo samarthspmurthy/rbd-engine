@@ -6,7 +6,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set up the main executable
-add_executable(rbd_sim src/main.cpp)
+add_executable(rbd_sim 
+    src/main.cpp
+    src/Quaternion.cpp
+    src/InertiaTensor.cpp
+    src/RigidBody.cpp
+    src/World.cpp
+    src/TwoLinkArm.cpp
+    src/DataLogger.cpp
+)
 
 # Direct Include Paths - Now pointing one level deeper!
 target_include_directories(rbd_sim PRIVATE 
