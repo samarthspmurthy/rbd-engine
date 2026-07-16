@@ -4,4 +4,5 @@ data/output/*
 !data/output/.gitkeep
 # Simulink cache and code generation artifacts
 *.slxc
-slprj/
+slprj/*.asv 
+*.asv

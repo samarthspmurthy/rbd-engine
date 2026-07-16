@@ -2,7 +2,7 @@
 % Single source of truth for the Double Pendulum validation.
 % These values strictly match the C++ TwoLinkArm constructor and main.cpp.
 
-clear; clc;
+% clear; clc;
 
 %% 1. Link Masses (kg)
 m1 = 1.0; 
